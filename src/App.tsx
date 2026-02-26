@@ -1,4 +1,6 @@
+import VoiceInput from "./components/VoiceInput";
 import ChatBot from "./components/ChatBot";
+import ApplicationForm from "./components/ApplicationForm";
 import schemesData from "./data/schemes.json";
 import React, { useState } from "react";
 import { motion } from "motion/react";
@@ -26,6 +28,12 @@ interface Scheme {
   minAge?: number;
   maxAge?: number;
   applyLink?: string;
+
+  // ⭐ scoring fields
+  score?: number;
+  reasons?: string[];
+  confidence?: "High" | "Medium" | "Low";
+  priority?: boolean;
 }
 
 const SCHEMES = schemesData as unknown as Scheme[];
@@ -49,6 +57,7 @@ const OCCUPATIONS = [
 /* ================= APP ================= */
 
 export default function App() {
+  const [applyScheme, setApplyScheme] = useState<Scheme | null>(null);
   const [lang, setLang] = useState<Language>("en");
   const [age, setAge] = useState("");
   const [income, setIncome] = useState("");
@@ -56,76 +65,80 @@ export default function App() {
   const [occupation, setOccupation] = useState("");
   const [results, setResults] = useState<Scheme[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [applicationSuccess, setApplicationSuccess] =
-    useState<string | null>(null);
 
   /* ================= SEARCH ================= */
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
+
+    const userAge = Math.max(1, parseInt(age) || 0);
+    const userIncome = Math.max(1, parseInt(income) || 0);
+
+    if (!userAge || !userIncome || !occupation) {
+      alert("Please fill all required fields properly.");
+      return;
+    }
+
     setIsSearching(true);
 
     setTimeout(() => {
-      const userAge = parseInt(age) || 0;
-      const userIncome = parseInt(income) || 0;
+      const scored = SCHEMES.map((scheme) => {
+        let score = 0;
+        const reasons: string[] = [];
 
-      const filtered = SCHEMES.filter((scheme) => {
-        if (userIncome > scheme.maxIncome) return false;
-
-        if (
-          scheme.state !== "All" &&
-          state !== "All States" &&
-          scheme.state !== state
-        )
-          return false;
-
-        if (scheme.occupation !== "All") {
-          const occ = Array.isArray(scheme.occupation)
-            ? scheme.occupation
-            : [scheme.occupation];
-          if (!occ.includes(occupation)) return false;
+        // income check
+        if (userIncome <= scheme.maxIncome) {
+          score += 40;
+          reasons.push("Income eligible");
         }
 
-        if (scheme.minAge && userAge < scheme.minAge) return false;
-        if (scheme.maxAge && userAge > scheme.maxAge) return false;
+        // state check
+        if (
+          scheme.state === "All" ||
+          state === "All States" ||
+          scheme.state === state
+        ) {
+          score += 30;
+          reasons.push("State eligible");
+        }
 
-        return true;
+        // occupation check
+        const occ = Array.isArray(scheme.occupation)
+          ? scheme.occupation
+          : [scheme.occupation];
+
+        if (scheme.occupation === "All" || occ.includes(occupation)) {
+          score += 20;
+          reasons.push("Occupation match");
+        }
+
+        // age check
+        if (
+          (!scheme.minAge || userAge >= scheme.minAge) &&
+          (!scheme.maxAge || userAge <= scheme.maxAge)
+        ) {
+          score += 10;
+          reasons.push("Age eligible");
+        }
+
+        // ⭐ confidence
+        let confidence: "High" | "Medium" | "Low" = "Low";
+        if (score >= 80) confidence = "High";
+        else if (score >= 60) confidence = "Medium";
+
+        // ⭐ priority
+        const priority = score >= 85;
+
+        return { ...scheme, score, reasons, confidence, priority };
       });
+
+      const filtered = scored
+        .filter((s) => (s.score ?? 0) >= 40)
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
       setResults(filtered);
       setIsSearching(false);
-    }, 600);
-  };
-
-  /* ================= APPLY ================= */
-
-  const handleApply = async (scheme: Scheme) => {
-    try {
-      const res = await fetch("http://localhost:5000/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: "demo-user-1",
-          schemeId: scheme.id,
-        }),
-      });
-
-      if (!res.ok) {
-        alert("You already applied for this scheme.");
-        return;
-      }
-
-      if (scheme.applyLink) {
-        window.open(scheme.applyLink, "_blank");
-      }
-
-      setApplicationSuccess(
-        lang === "en" ? scheme.title_en : scheme.title_hi
-      );
-      setTimeout(() => setApplicationSuccess(null), 2500);
-    } catch {
-      alert("Server not reachable");
-    }
+    }, 500);
   };
 
   /* ================= UI ================= */
@@ -168,22 +181,20 @@ export default function App() {
           </h2>
         </div>
 
-        {/* FORM CARD */}
+        {/* FORM */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl border border-slate-200 p-8"
         >
-          <form
-            onSubmit={handleSearch}
-            className="grid md:grid-cols-2 gap-6"
-          >
+          <form onSubmit={handleSearch} className="grid md:grid-cols-2 gap-6">
             <InputField
               icon={<User className="w-4 h-4" />}
               label="Your Age"
               value={age}
               onChange={setAge}
               type="number"
+              min={1}
             />
 
             <InputField
@@ -192,6 +203,7 @@ export default function App() {
               value={income}
               onChange={setIncome}
               type="number"
+              min={1}
             />
 
             <SelectField
@@ -212,7 +224,7 @@ export default function App() {
             />
 
             <div className="md:col-span-2 pt-2">
-              <button className="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:scale-[1.01] active:scale-[0.98] transition">
+              <button className="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600">
                 {isSearching ? "Searching..." : "Find My Schemes"}
               </button>
             </div>
@@ -223,72 +235,80 @@ export default function App() {
       {/* RESULTS */}
       <section className="max-w-6xl mx-auto px-4 pb-16 grid gap-5">
         {results?.map((scheme, index) => (
-  <motion.div
-    key={scheme.id}
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: index * 0.05 }}
-    whileHover={{ y: -4 }}
-    className="group bg-white rounded-2xl border border-slate-200 
-               shadow-sm hover:shadow-xl hover:shadow-indigo-100/40 
-               transition-all duration-300 p-6 flex flex-col"
-  >
-    {/* Top Row */}
-    <div className="flex items-start justify-between mb-3">
-      <h4 className="text-lg font-semibold text-slate-900 leading-snug">
-        {lang === "en" ? scheme.title_en : scheme.title_hi}
-      </h4>
-
-      <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center">
-        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-      </div>
-    </div>
-
-    {/* Description (rural friendly hint) */}
-    <p className="text-sm text-slate-500 mb-5 leading-relaxed">
-      Eligible government benefit based on your profile.
-    </p>
-
-    {/* Apply Button */}
-    <button
-      onClick={() => handleApply(scheme)}
-      className="mt-auto w-full py-3 rounded-xl font-semibold
-                 bg-slate-900 text-white
-                 hover:bg-indigo-600
-                 active:scale-[0.98]
-                 transition-all duration-200"
-    >
-      Apply Now
-    </button>
-  </motion.div>
-))}
-        {/* {results?.map((scheme) => (
-          <div
+          <motion.div
             key={scheme.id}
-            className="bg-white rounded-2xl border p-5 shadow-sm"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+            className="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 p-6 flex flex-col"
           >
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold">
+            <div className="flex items-start justify-between mb-2">
+              <h4 className="text-lg font-semibold text-slate-900">
                 {lang === "en" ? scheme.title_en : scheme.title_hi}
-              </h3>
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              </h4>
+
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+
+                {scheme.priority && (
+                  <span className="text-[10px] font-bold px-2 py-1 rounded bg-purple-100 text-purple-700">
+                    Priority
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* confidence */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs font-semibold text-indigo-600">
+                Match: {scheme.score ?? 0}%
+              </span>
+
+              <span
+                className={`text-[10px] font-bold px-2 py-1 rounded
+                ${
+                  scheme.confidence === "High"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : scheme.confidence === "Medium"
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-red-100 text-red-600"
+                }`}
+              >
+                {scheme.confidence} Confidence
+              </span>
             </div>
 
             <button
-              onClick={() => handleApply(scheme)}
-              className="mt-3 w-full bg-slate-900 text-white py-2.5 rounded-xl font-semibold hover:bg-black transition"
+              onClick={() => setApplyScheme(scheme)}
+              className="mt-auto w-full py-3 rounded-xl font-semibold bg-slate-900 text-white hover:bg-indigo-600 transition"
             >
               Apply Now
             </button>
+          </motion.div>
+        ))}
+
+        {/* empty state */}
+        {results && results.length === 0 && (
+          <div className="text-center py-16 text-slate-500">
+            <p className="text-lg font-semibold mb-2">
+              No strong matches found
+            </p>
+            <p className="text-sm">
+              Try adjusting income, state, or occupation.
+            </p>
           </div>
-        ))} */}
+        )}
       </section>
 
-      {/* SUCCESS */}
-      {applicationSuccess && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-xl">
-          Application Initiated Successfully!
-        </div>
+      {/* FORM MODAL */}
+      {applyScheme && (
+        <ApplicationForm
+          schemeId={applyScheme.id}
+          schemeName={
+            lang === "en" ? applyScheme.title_en : applyScheme.title_hi
+          }
+          onClose={() => setApplyScheme(null)}
+        />
       )}
 
       {/* CHATBOT */}
@@ -297,8 +317,7 @@ export default function App() {
           if (data.state) setState(data.state);
           if (data.occupation) setOccupation(data.occupation);
           if (data.age !== undefined) setAge(String(data.age));
-          if (data.income !== undefined)
-            setIncome(String(data.income));
+          if (data.income !== undefined) setIncome(String(data.income));
         }}
       />
     </div>
@@ -313,6 +332,7 @@ function InputField({
   value,
   onChange,
   type = "text",
+  min,
 }: any) {
   return (
     <div>
@@ -322,6 +342,7 @@ function InputField({
       </label>
       <input
         type={type}
+        min={min}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"

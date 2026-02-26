@@ -1,46 +1,67 @@
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
-import dotenv from "dotenv";
 import Application from "./models/Application.js";
 
-dotenv.config();
-
 const app = express();
+
+// middleware
 app.use(cors());
 app.use(express.json());
 
-/* ================= MONGODB ================= */
-
+// ✅ Mongo connect
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect("mongodb://127.0.0.1:27017/indiathriving")
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("Mongo error:", err));
 
-/* ================= ROUTES ================= */
+/* ================= APPLY ROUTE ================= */
 
-// health check
-app.get("/", (req, res) => {
-  res.send("IndiaThriving backend running 🚀");
-});
-
-// ✅ APPLY ROUTE
 app.post("/apply", async (req, res) => {
   try {
-    const { userId, schemeId } = req.body;
+    const {
+      userId,
+      schemeId,
+      name,
+      phone,
+      email,
+      fatherName,
+      motherName,
+      spouseName,
+      gender,
+      category,
+      state,
+      address,
+      aadhaar,
+    } = req.body;
 
-    if (!userId || !schemeId) {
-      return res.status(400).json({ message: "Missing fields" });
+    // basic validation
+    if (!userId || !schemeId || !name || !phone) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
-    await Application.create({ userId, schemeId });
+    await Application.create({
+      userId,
+      schemeId,
+      name,
+      phone,
+      email,
+      fatherName,
+      motherName,
+      spouseName,
+      gender,
+      category,
+      state,
+      address,
+      aadhaar,
+    });
 
     return res.status(200).json({
       success: true,
       message: "Application saved",
     });
   } catch (err) {
-    // 🚨 duplicate apply
+    // duplicate apply
     if (err.code === 11000) {
       return res.status(409).json({
         success: false,
@@ -48,15 +69,13 @@ app.post("/apply", async (req, res) => {
       });
     }
 
-    console.error(err);
+    console.error("🔥 APPLY ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
 /* ================= START ================= */
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+app.listen(5000, () => {
+  console.log("🚀 Server running on http://localhost:5000");
 });

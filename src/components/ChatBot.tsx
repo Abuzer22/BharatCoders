@@ -170,21 +170,7 @@ export default function ChatBot({ onAutoFill }: Props) {
 }
 
 const styles: Record<string, CSSProperties> = {
-//   fab: {
-//     position: "fixed",
-//     bottom: 20,
-//     right: 20,
-//     width: 58,
-//     height: 58,
-//     borderRadius: "50%",
-//     background: "linear-gradient(135deg,#4f46e5,#7c3aed)",
-//     color: "#fff",
-//     border: "none",
-//     fontSize: 22,
-//     cursor: "pointer",
-//     zIndex: 99999,
-//     boxShadow: "0 10px 25px rgba(79,70,229,.35)",
-//   },
+
 
 fab: {
   position: "fixed",
@@ -203,22 +189,6 @@ background: "#111827",
   alignItems: "center",
   justifyContent: "center",
 },
-
-//   container: {
-//     position: "fixed",
-//     bottom: 95,
-//     right: 20,
-//     width: 360,
-//     height: 520,
-//     background: "#fff",
-//     borderRadius: 16,
-//     boxShadow: "0 25px 60px rgba(0,0,0,.18)",
-//     display: "flex",
-//     flexDirection: "column",
-//     overflow: "hidden",
-//     zIndex: 99999,
-//   },
-
 container: {
   position: "fixed",
   bottom: 95,
