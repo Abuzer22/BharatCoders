@@ -1,20 +1,18 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+Team Name - 
+[Bharat Coders] |
 
-# Run and deploy your AI Studio app
+Project Name -
+[India Thriving] |
 
-This contains everything you need to run your app locally.
+Problem Statement (P)-15 |
 
-View your app in AI Studio: https://ai.studio/apps/3b6d2d2c-59b2-40ee-b8ba-5e7b8d67cdf5
+[Open Innovation – Build for Bharat Any real-world problem aligned with national development goals.
+This AI-powered, unified platform helps citizens instantly discover and apply for over 1,000 government schemes through deep profile analysis and personalized recommendations. Built specifically to empower rural and low-literacy users] |
 
-## Run Locally
+Track -4 -
+[Open Innovation ] |
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Team Members - 
+1. Abuzer - Research, Testing & Presentation Lead |
+2. Anamika Singh - AI & Backend Lead |
+3. Farhan Siddqui - Frontend & UI/UX Lead |
